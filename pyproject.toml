@@ -8,7 +8,7 @@ description = "Utils for dynamic foraging population analysis"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
-    {name = "Han Hou", email = "han.hou@alleninstitute.org"}
+    {name = "Han Hou", email = "han.hou@alleninstitute.org"},
     {name = "Allen Institute for Neural Dynamics"}
 ]
 classifiers = [
