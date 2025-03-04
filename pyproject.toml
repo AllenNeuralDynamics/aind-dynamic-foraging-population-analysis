@@ -18,7 +18,11 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
-    'aind-analysis-arch-result-access'
+    'aind-analysis-arch-result-access',
+    'matplotlib',
+    'seaborn',
+    'numpy',
+    'pandas'
 ]
 
 [project.optional-dependencies]
