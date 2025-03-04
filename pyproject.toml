@@ -18,6 +18,7 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+    'aind-analysis-arch-result-access'
 ]
 
 [project.optional-dependencies]
