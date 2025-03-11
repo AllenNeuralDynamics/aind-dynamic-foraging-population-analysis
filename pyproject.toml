@@ -19,6 +19,7 @@ dynamic = ["version"]
 
 dependencies = [
     'aind-analysis-arch-result-access',
+    'aind-dynamic-foraging-models',
     'matplotlib',
     'seaborn',
     'numpy',
