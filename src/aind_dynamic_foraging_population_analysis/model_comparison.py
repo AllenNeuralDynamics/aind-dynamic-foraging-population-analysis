@@ -50,11 +50,46 @@ def get_all_model_metrics(use_cache=True, cache_path="~/capsule/data/df_model_fi
     return df_model_fitting
 
 
+def enrich_with_df_session(df_model_fitting):
+    """Enrich df_model_fitting with session information from get_session_table.
+
+    Parameters
+    ----------
+    df_model_fitting : pd.DataFrame
+        DataFrame containing model fitting results.
+
+    Returns
+    -------
+    pd.DataFrame
+        Enriched DataFrame with session information.
+    """
+    logger.info("Fetching session table...")
+    df_session = get_session_table()
+
+    logger.info("Merging model fitting data with session data...")
+    # Merge in session metadata
+    df_session["session_date"] = df_session["session_date"].astype("str")
+    df_enriched = df_model_fitting.merge(
+        df_session[
+            [
+                "subject_id",
+                "session_date",
+                "nwb_suffix",
+                "curriculum_name",
+                "curriculum_version_group",
+                "current_stage_actual",
+            ]
+        ],
+        on=["subject_id", "session_date"],
+        how="left",
+    )
+    return df_enriched
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, 
                         format='%(filename)s:%(lineno)d - %(levelname)s - %(message)s')
 
 
-    df_model_fitting = get_all_model_metrics()
-    
+    df_model_fitting = get_all_model_metrics(use_cache=True)
+    df_model_fitting = enrich_with_df_session(df_model_fitting)
