@@ -1,29 +1,37 @@
 """Population model comparison"""
 
 import matplotlib.pyplot as plt
-plt.rcParams['svg.fonttype'] = 'none'
+
+plt.rcParams["svg.fonttype"] = "none"
 # plt.rcParams['font.family'] = 'Arial'
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from aind_analysis_arch_result_access.han_pipeline import get_session_table, get_mle_model_fitting
+from aind_analysis_arch_result_access.han_pipeline import (
+    get_session_table,
+    get_mle_model_fitting,
+)
 from aind_analysis_arch_result_access.util.s3 import get_s3_pkl, get_s3_json
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 SESSION_KEYS = ["subject_id", "session_date"]
 
-def get_all_model_metrics(use_cache=True, cache_path="~/capsule/data/df_model_fitting_all.pkl"):
+
+def get_all_model_metrics(
+    use_cache=True, cache_path="~/capsule/data/df_model_fitting_all.pkl"
+):
     """Get all model metrics from either cache or result access API.
 
     Parameters
     ----------
     use_cache : bool, optional
         Whether to use cached data, by default True
-        If true, it will load data from the cache. If cache does not exist 
+        If true, it will load data from the cache. If cache does not exist
            or is invalid, it will fetch data from the API.
         If False, it will fetch data from the API and update the cache_path.
     cache_path : str, optional
@@ -68,7 +76,7 @@ def enrich_with_df_session(df, selected_fields):
     """
     logger.info("Fetching session table...")
     df_session = get_session_table()
-    
+
     logger.info("Merging model fitting data with session data...")
     # Merge in session metadata
     df_session["session_date"] = df_session["session_date"].astype("str")
@@ -80,9 +88,9 @@ def enrich_with_df_session(df, selected_fields):
     return df_enriched
 
 
-def _subtract_baseline(group, baseline_models=['LossCounting'], metric='AIC'):
+def _subtract_baseline(group, baseline_models=["LossCounting"], metric="AIC"):
     """Subtract baseline metric from each model in the group.
-    
+
     Parameters
     ----------
     group : group of pd.DataFrame
@@ -92,30 +100,29 @@ def _subtract_baseline(group, baseline_models=['LossCounting'], metric='AIC'):
     metric : str, optional
         The metric to subtract, by default 'AIC'
     """
-    baseline = group.loc[group['agent_alias'].isin(baseline_models), metric].mean()
-    group[f'delta_{metric}'] = group[metric] - baseline
+    baseline = group.loc[group["agent_alias"].isin(baseline_models), metric].mean()
+    group[f"delta_{metric}"] = group[metric] - baseline
     return group
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, 
-                        format='%(filename)s:%(lineno)d - %(levelname)s - %(message)s')
-
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(filename)s:%(lineno)d - %(levelname)s - %(message)s",
+    )
 
     df_model_fitting = get_all_model_metrics(use_cache=True)
     df_model_fitting = enrich_with_df_session(df_model_fitting)
 
     n_models = df_model_fitting.value_counts("nwb_name")
-    
+
     # Filter sessions that have all 30 models fitted
     df_filtered = df_model_fitting[
         df_model_fitting["nwb_name"].isin(n_models[n_models == 30].index)
     ]
-    
+
     # Filtered on curriculum version and stages
     df_model_fitting_30_filtered = df_model_fitting_30_filtered.query(
         "curriculum_version_group == 'v3' &"
         "current_stage_actual in ['STAGE_FINAL', 'GRADUATED']"
     )
-    
-    
