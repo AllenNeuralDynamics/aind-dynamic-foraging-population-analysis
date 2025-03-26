@@ -42,7 +42,7 @@ def get_all_model_metrics(
         try:
             logger.info(f"Trying to load data from cache: {cache_path}...")
             df_model_fitting = pd.read_pickle(cache_path)
-            logger.info("Done!")
+            logger.info(f"{len(df_model_fitting)} rows loaded from cache.")
             return df_model_fitting
         except Exception as e:
             logger.warning(f"Cache not found or invalid: {e}. Fetching from API.")
@@ -55,7 +55,7 @@ def get_all_model_metrics(
         paginate_settings={"paginate": True, "paginate_batch_size": 5000},
     )
     df_model_fitting.to_pickle(cache_path)
-    logger.info(f"Data fetched and cached successfully to {cache_path}.")
+    logger.info(f"{len(df_model_fitting)} rows fetched from API and saved to cache.")
     return df_model_fitting
 
 
