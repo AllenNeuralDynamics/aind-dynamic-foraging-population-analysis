@@ -88,6 +88,86 @@ def enrich_with_df_session(df, selected_fields):
     return df_enriched
 
 
+def plot_best_model_counts(df, metrics, ax):
+    """
+    Plot the counts of best model variants based on a specified metric.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing model metrics and agent_alias.
+    metrics : str
+        The metric to determine the best model (e.g., 'AIC', 'BIC').
+    ax : matplotlib.axes.Axes
+        The axes to plot on.
+    
+    """
+    # Count the number of best model for each session
+    session_keys = ["subject_id", "session_date"]
+    best_models = df.loc[df.groupby(session_keys)[metrics].idxmin()]
+
+    # Ensure all required models are present, even if never best
+    best_models_count = best_models['agent_alias'].value_counts()
+    all_aliases = df['agent_alias'].unique()
+    best_models_count = best_models_count.reindex(all_aliases, fill_value=0)
+    best_models_count.plot(kind='bar', ax=ax)
+    # Sort bars by count (descending)
+    best_models_count = best_models_count.sort_values(ascending=False)
+    ax.clear()
+    best_models_count.plot(kind='bar', ax=ax)
+    ax.set_xlabel('Model variant')
+    plt.xticks(rotation=45, ha='right')
+    sns.despine(trim=True)
+    ax.set(
+        ylabel=f"Number of sessions where\n the model is the best \n(based on {metrics})",
+        title=f"n = {best_models_count.sum()} sessions"
+    )
+    return ax
+
+
+def compare_models_across_curriculum(df, metrics):
+    """
+    Compare best model counts across different curriculums and stages.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing model metrics and agent_alias.
+    metrics : str
+        The metric to determine the best model (e.g., 'AIC', 'BIC').
+    """
+    unique_curriculums = df['curriculum_name'].dropna().unique()
+    unique_stages = df['current_stage_actual'].dropna().unique()
+    stage_order = [None, 'STAGE_1_WARMUP', 'STAGE_1', 'STAGE_2', 'STAGE_3', 'STAGE_4', 'STAGE_FINAL', 'GRADUATED']
+
+    # Convert all to string for comparison, handle None as 'None'
+    unique_stages = sorted(unique_stages, key=lambda x: stage_order.index(x) if x in stage_order else len(stage_order))
+    n_rows = len(unique_curriculums)
+    n_cols = len(unique_stages)
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 5 * n_rows), squeeze=False)
+
+    for i, curriculum in enumerate(unique_curriculums):
+        for j, stage in enumerate(unique_stages):
+            df_sub = df[
+                (df['curriculum_name'] == curriculum) &
+                (df['current_stage_actual'] == stage)
+            ]
+            ax = axes[i, j]
+            if not df_sub.empty:
+                plot_best_model_counts(df_sub, metrics, ax)
+            ax.set_title(f"{curriculum}\n{stage}")
+            ax.set_xlabel('Model variant')
+            n_sessions = df_sub[["subject_id", "session_date"]].drop_duplicates().shape[0]
+            ax.set_title(f"{curriculum}\n{stage}\nn={n_sessions} sessions")
+            ax.set_ylabel('Best model count')
+            plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+
+    plt.tight_layout()
+    sns.despine(trim=True)
+    return fig, axes
+
+
 def _subtract_baseline(group, baseline_models=["LossCounting"], metric="AIC"):
     """Subtract baseline metric from each model in the group.
 
