@@ -88,9 +88,9 @@ def enrich_with_df_session(df, selected_fields):
     return df_enriched
 
 
-def plot_best_model_counts(df, metrics, ax):
+def plot_best_model_counts(df, metrics, ax, model_order=None):
     """
-    Plot the counts of best model variants based on a specified metric.
+    Plot the counts of model variants based on a specified metric.
     
     Parameters
     ----------
@@ -100,6 +100,8 @@ def plot_best_model_counts(df, metrics, ax):
         The metric to determine the best model (e.g., 'AIC', 'BIC').
     ax : matplotlib.axes.Axes
         The axes to plot on.
+    model_order : list, optional
+        Order of models to plot. If None, sort by count (descending).
     
     """
     # Count the number of best model for each session
@@ -107,25 +109,33 @@ def plot_best_model_counts(df, metrics, ax):
     best_models = df.loc[df.groupby(session_keys)[metrics].idxmin()]
 
     # Ensure all required models are present, even if never best
-    best_models_count = best_models['agent_alias'].value_counts()
+    best_model_count = best_models['agent_alias'].value_counts()
     all_aliases = df['agent_alias'].unique()
-    best_models_count = best_models_count.reindex(all_aliases, fill_value=0)
-    best_models_count.plot(kind='bar', ax=ax)
-    # Sort bars by count (descending)
-    best_models_count = best_models_count.sort_values(ascending=False)
-    ax.clear()
-    best_models_count.plot(kind='bar', ax=ax)
-    ax.set_xlabel('Model variant')
+    best_model_count = best_model_count.reindex(all_aliases, fill_value=0)
+    
+    # Order models according to model_order if provided
+    if model_order is not None:
+        # Keep only models that exist in the data and are in the specified order
+        ordered_models = [model for model in model_order if model in best_model_count.index]
+        # Add any remaining models not in the specified order
+        remaining_models = [model for model in best_model_count.index if model not in model_order]
+        final_order = ordered_models + remaining_models
+        best_model_count = best_model_count.reindex(final_order)
+    else:
+        # Sort bars by count (descending)
+        best_model_count = best_model_count.sort_values(ascending=False)
+    
+    best_model_count.plot(kind='bar', ax=ax)
     plt.xticks(rotation=45, ha='right')
-    sns.despine(trim=True)
+    sns.despine(trim=True, ax=ax)
     ax.set(
         ylabel=f"Number of sessions where\n the model is the best \n(based on {metrics})",
-        title=f"n = {best_models_count.sum()} sessions"
+        title=f"n = {best_model_count.sum()} sessions"
     )
     return ax
 
 
-def compare_models_across_curriculum(df, metrics):
+def compare_models_across_curriculum(df, metrics, model_order=None):
     """
     Compare best model counts across different curriculums and stages.
     
@@ -135,6 +145,8 @@ def compare_models_across_curriculum(df, metrics):
         DataFrame containing model metrics and agent_alias.
     metrics : str
         The metric to determine the best model (e.g., 'AIC', 'BIC').
+    model_order: None
+        If None, sort model by best counts; else, use fixed model_order
     """
     unique_curriculums = df['curriculum_name'].dropna().unique()
     unique_stages = df['current_stage_actual'].dropna().unique()
@@ -155,16 +167,17 @@ def compare_models_across_curriculum(df, metrics):
             ]
             ax = axes[i, j]
             if not df_sub.empty:
-                plot_best_model_counts(df_sub, metrics, ax)
-            ax.set_title(f"{curriculum}\n{stage}")
+                plot_best_model_counts(df_sub, metrics, ax, model_order=model_order)
+            else:
+                ax.axis('off')
+
             ax.set_xlabel('Model variant')
+            ax.set_ylabel('Best model count')
             n_sessions = df_sub[["subject_id", "session_date"]].drop_duplicates().shape[0]
             ax.set_title(f"{curriculum}\n{stage}\nn={n_sessions} sessions")
-            ax.set_ylabel('Best model count')
             plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
 
     plt.tight_layout()
-    sns.despine(trim=True)
     return fig, axes
 
 
